@@ -1,22 +1,81 @@
+require 'test/unit'
+require File.join([File.expand_path(File.dirname(__FILE__)), '..', 'rn_schrittmotor']
 
-set_stepper_current,   10.chr, :motor, :mA, :persist],
-    set_start_current,     11.chr, :motor, :mA, :persist],
-    set_holding_current,   12.chr, :motor, :mA, :persist],
-    set_stepping_mode,     13.chr, :mode, :persist],
-    reset_counter,         14.chr, :motor],
-    switch_on!,            50.chr, :motor],
-    switch_off!,           51.chr, :motor],
-    set_direction,         52.chr, :motor, :direction],
-    set_speed,             53.chr, :motor, :speed, :accel],
-    run!,                  54.chr, :motor],
-    step!,                 55.chr, :motor, :steps],
-    read_status,          101.chr, :motor],
-    read_counter,         102.chr, :motor],
-    read_i2c_response,    103.chr, :motor],
-    read_end_switches,    104.chr, :motor],
-    set_controller_mode,  200.chr, :mode],
-    set_crc_mode,         201.chr, :onoff],
-    set_i2c_slave_id,     202.chr, :i2c_id],
-    reset_eeprom,         203.chr],
-    read_eeprom,          254.chr, :size],
-    read_version,         255.chr]
+class RNSchrittmotorTest <Test::Unit::TestCase
+  def test_crc8
+    assert false
+  end
+
+  def test_do_it
+  end
+
+  def test_number_to_bytes
+  end
+
+  def test_read_counter
+  end
+
+  def test_read_eeprom
+  end
+
+  def test_read_end_switches
+  end
+
+  def test_read_i2c_response
+  end
+
+  def test_read_status
+  end
+
+  def test_read_version
+  end
+
+  def test_reset_counter
+  end
+
+  def test_reset_eeprom
+  end
+
+  def test_run!
+  end
+
+  def test_set_controller_mode
+  end
+
+  def test_set_crc_mode
+  end
+
+  def test_set_direction
+  end
+
+  def test_set_holding_current
+  end
+
+  def test_set_i2c_slave_id
+  end
+
+  def test_set_speed
+  end
+
+  def test_set_start_current
+  end
+
+  def test_set_stepper_current
+  end
+
+  def test_set_stepping_mode
+  end
+
+  def test_step!
+  end
+
+  def test_switch_off!
+  end
+
+  def test_switch_on!
+  end
+
+  def test_
+  end
+end
+
