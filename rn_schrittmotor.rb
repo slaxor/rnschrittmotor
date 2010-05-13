@@ -3,7 +3,7 @@
 require 'serialport'
 class RNSchrittmotor < SerialPort
 
-  DEBUG = true
+  @@debug = true
 
   COMMANDS = [
     [:set_stepper_current,   10, :motor, :mA, :persist],
@@ -19,12 +19,12 @@ class RNSchrittmotor < SerialPort
     [:step!,                 55, :motor, :steps],
     [:read_status,          101, :motor],
     [:read_counter,         102, :motor],
-    [:read_i2c_response,    103, :motor],
-    [:read_end_switches,    104, :motor],
+    [:read_i2c_response,    103],
+    [:read_end_switches,    104],
     [:set_controller_mode,  200, :mode],
     [:set_crc_mode,         201, :onoff],
     [:set_i2c_slave_id,     202, :i2c_id],
-    [:reset_eeprom,         203],
+    [:reset_eeprom,         203, :confirm], # totally braindead
     [:read_eeprom,          254, :size],
     [:read_version,         255]
   ]
@@ -33,21 +33,24 @@ class RNSchrittmotor < SerialPort
     class_eval %Q(
       def #{command_name}(#{params.join(',')})
         cmd = #{command_byte}.chr
-        #{params.map {|p| [:mA, :steps].include?(p) ? "cmd << number_to_bytes(" + p.to_s + ")\n" : "cmd << " + p.to_s + ".chr\n"}}
+        #{params.map {|p| [:mA, :steps].include?(p) ? "cmd << self.class.number_to_bytes(" + p.to_s + ")\n" : "cmd << " + p.to_s + ".chr\n"}}
         do_it(cmd.ljust(6,0.chr))
       end
     )
   end
 
+  SERIAL = I2C = 0
+  PULSE = 2
+
   FIRST = 1
   SECOND = 2
   BOTH = 3
 
-  LEFT = 0
-  RIGHT = 1
+  CCW = LEFT = 0
+  CW = RIGHT = 1
 
-  OFF = 0
-  ON = 1
+  CRCOFF = 0
+  CRCON = 1
 
   HALF = 0
   FULL = 1
@@ -58,30 +61,37 @@ class RNSchrittmotor < SerialPort
   RETURNCODES = { '*' => 'OK', '+' => 'Unknown Command', ',' => 'Wrong CRC', '-' => 'Wrong/Odd Slave ID'}
 
   def do_it(cmd)
-    if DEBUG
+    if @@debug
       cmd.each_byte do |byte|
         $stdout.print "#{byte} "
       end
-      $stdout.print crc8(cmd)
+      $stdout.print "[#{self.class.crc8(cmd)[0]}]"
     end
-    write('!#' + cmd + crc8(cmd))
+    write('!#' + cmd + self.class.crc8(cmd))
     sleep(0.2)
     read
   end
 
-  def crc8(string)
-    crc_byte = 0
-    string[2..-1].each_byte do |byte| # skip attention-bytes '!#'
-      crc_byte = byte ^ crc_byte
+  def self.crc8(string)
+    crc8 = 0
+    string.each_byte do |byte|
+      8.times do
+        byte_xor_crc8 = (byte ^ crc8)
+        crc8 = crc8 / 2
+        if byte_xor_crc8.odd?
+          crc8 = crc8 ^ 0x8c # no idea why it is 0x8c but the example said so
+        end
+      end
     end
-    crc_byte.chr
+    crc8.chr
   end
 
-  def number_to_bytes(number)
+  def self.number_to_bytes(number)
     (number & 0xff).chr + (number>>8&0xff).chr
   end
 
+  def self.steps_per_sec(num)
+    1000 / (num + 1)
+  end
 end
-
-#rns = RNSchrittmotor.new('/dev/ttyUSB0', 9600)
 
