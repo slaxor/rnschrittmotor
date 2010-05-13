@@ -5,7 +5,8 @@ http://github.com/slaxor/rnschrittmotor
 DESCRIPTION:
 ------------
 This is a convenience lib for the Stepper-Controller board from
-<http://www.shop.robotikhardware.de/shop/catalog/product_info.php?products_id=173>
+<http://www.shop.robotikhardware.de/shop/catalog/product_info.php?products_id=173>. It follows this
+[API-Doc](http://www.robotikhardware.de/download/rnschrittmotor.pdf "RN-Schrittmotor API-Doc")
 
 SYNOPSIS:
 ---------
