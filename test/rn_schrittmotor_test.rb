@@ -1,11 +1,6 @@
-# © 2010 Sascha Teske <sascha.teske@microprojects.de>
-require 'rubygems'
-require 'test/unit'
-require 'mocha'
-require 'stringio'
-require File.join([File.expand_path(File.dirname(__FILE__)), '..', 'rn_schrittmotor'])
+require File.dirname(__FILE__) + '/test_helper.rb'
 
-class RNSchrittmotorTest <Test::Unit::TestCase
+class RNSchrittmotorTest < Test::Unit::TestCase
 
   def setup
     @stepper = RNSchrittmotor.new('/dev/ttyUSB0', 9600)

@@ -1,6 +1,4 @@
 #!/usr/bin/env ruby
-# © 2010 Sascha Teske <sascha.teske@microprojects.de>
-# Free for personal use
 require 'serialport'
 class RNSchrittmotor < SerialPort
 
