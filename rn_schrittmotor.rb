@@ -1,9 +1,31 @@
 #!/usr/bin/env ruby
 # © 2010 Sascha Teske <sascha.teske@microprojects.de>
+# Free for personal use
 require 'serialport'
 class RNSchrittmotor < SerialPort
 
-  @@debug = true
+  @@debug = false
+
+  SERIAL = I2C = 0
+  PULSE = 2
+
+  FIRST = 1
+  SECOND = 2
+  BOTH = 3
+
+  CCW = LEFT = 0
+  CW = RIGHT = 1
+
+  CRCOFF = 0
+  CRCON = 1
+
+  HALF = 0
+  FULL = 1
+
+  FORGET = 0
+  PERSIST = 1
+
+  RETURNCODES = { '*' => 'OK', '+' => 'Unknown Command', ',' => 'Wrong CRC', '-' => 'Wrong/Odd Slave ID'}
 
   COMMANDS = [
     [:set_stepper_current,   10, :motor, :mA, :persist],
@@ -39,26 +61,21 @@ class RNSchrittmotor < SerialPort
     )
   end
 
-  SERIAL = I2C = 0
-  PULSE = 2
+  def emergency_off!
+   switch_off!(BOTH)
+  end
 
-  FIRST = 1
-  SECOND = 2
-  BOTH = 3
-
-  CCW = LEFT = 0
-  CW = RIGHT = 1
-
-  CRCOFF = 0
-  CRCON = 1
-
-  HALF = 0
-  FULL = 1
-
-  FORGET = 0
-  PERSIST = 1
-
-  RETURNCODES = { '*' => 'OK', '+' => 'Unknown Command', ',' => 'Wrong CRC', '-' => 'Wrong/Odd Slave ID'}
+  def export_settings
+    ee = read_eeprom(16)
+    %Q(i2c_slave_id = #{ee[0]}
+stepper_current = [#{self.class.bytes_to_number(ee[1,2])}, #{self.class.bytes_to_number(ee[3,2])}]
+start_current = [#{self.class.bytes_to_number(ee[5,2])}, #{self.class.bytes_to_number(ee[7,2])}]
+holding_current = [#{self.class.bytes_to_number(ee[9,2])}, #{self.class.bytes_to_number(ee[11,2])}]
+stepping_mode = #{ee[13]}
+controller_mode = #{ee[14]}
+crc_mode = #{ee[15]}
+)
+  end
 
   def do_it(cmd)
     if @@debug
@@ -73,21 +90,27 @@ class RNSchrittmotor < SerialPort
   end
 
   def self.crc8(string)
-    crc8 = 0
-    string.each_byte do |byte|
-      8.times do
-        byte_xor_crc8 = (byte ^ crc8)
-        crc8 = crc8 / 2
-        if byte_xor_crc8.odd?
-          crc8 = crc8 ^ 0x8c # no idea why it is 0x8c but the example said so
+   crc8 = 0
+   magic_constant = 0x8c # can anyone explain this to me?
+   string.each_byte do |byte_value|
+     8.times do
+        j = 1 & (byte_value ^ crc8)
+        crc8 = (crc8 / 2) & 0xff
+        byte_value = (byte_value / 2) & 0xff
+        if j != 0
+          crc8 = crc8 ^ magic_constant
         end
-      end
-    end
-    crc8.chr
+     end
+   end
+   crc8.chr
   end
 
   def self.number_to_bytes(number)
     (number & 0xff).chr + (number>>8&0xff).chr
+  end
+
+  def self.bytes_to_number(bytes)
+    bytes[0]|bytes[1]<<8
   end
 
   def self.steps_per_sec(num)

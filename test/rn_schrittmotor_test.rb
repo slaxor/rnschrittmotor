@@ -22,8 +22,42 @@ class RNSchrittmotorTest <Test::Unit::TestCase
     @stepper.do_it("\xff\x00\x00\x00\x00\x00")
   end
 
+  #eeprom_bytes
+  #0 I2C Slave ID
+  #1 Motorstrom in mA Motor 1 Low-Byte
+  #2 Motorstrom in mA Motor 1 High-Byte
+  #3 Motorstrom in mA Motor 2 Low-Byte
+  #4 Motorstrom in mA Motor 2 High-Byte
+  #5 Haltestrom in mA Motor 1 Low-Byte
+  #6 Haltestrom in mA Motor 1 High-Byte
+  #7 Haltestrom in mA Motor 2 Low-Byte
+  #8 Haltestrom in mA Motor 2 High-Byte
+  #9 Anlaufstrom in mA Motor 1 Low-Byte
+  #10 Anlaufstrom in mA Motor 1 High-Byte
+  #11 Anlaufstrom in mA Motor 2 Low-Byte
+  #12 Anlaufstrom in mA Motor 2 High-Byte
+  #13 Schrittmotormodus 0=Vollschritt 1=Halbschritt
+  #14 Schnittstellenmodus 1=Intelligent 2=Takt
+  #15 CRC Mode 1=aktiv 0=aus
+
+  def test_export_settings
+    @stepper.expects(:do_it).with("\xfe\x10\x00\x00\x00\x00").returns("\x42\x00\x04\x00\x04\x00\x05\x00\x05\xfa\x00\xfa\x00\x01\x02\x00")
+    assert_equal %Q(i2c_slave_id = 66
+stepper_current = [1024, 1024]
+start_current = [1280, 1280]
+holding_current = [250, 250]
+stepping_mode = 1
+controller_mode = 2
+crc_mode = 0
+), @stepper.export_settings
+  end
+
   def test_number_to_bytes
     assert_equal "\x04\x0c", RNSchrittmotor.number_to_bytes(3076)
+  end
+
+  def test_bytes_to_number
+    assert_equal 32515, RNSchrittmotor.bytes_to_number("\x03\x7f")
   end
 
   def test_read_counter
@@ -32,8 +66,8 @@ class RNSchrittmotorTest <Test::Unit::TestCase
   end
 
   def test_read_eeprom
-    @stepper.expects(:do_it).with("\3762\000\000\000\000").returns("\xff" * 50)
-    assert_equal "\xff" * 50, @stepper.read_eeprom(50)
+    @stepper.expects(:do_it).with("\xfe\x20\000\000\000\000").returns("\xff" * 32)
+    assert_equal "\xff" * 32, @stepper.read_eeprom(32)
   end
 
   def test_read_end_switches
@@ -117,40 +151,47 @@ class RNSchrittmotorTest <Test::Unit::TestCase
   end
 
   def test_set_start_current
-    @stepper.expects(:do_it).with("\x0a\001\b\a\000\000").returns("*")
-    assert_equal "*", @stepper.set_holding_current(RNSchrittmotor::FIRST, 1800, RNSchrittmotor::FORGET)
+    @stepper.expects(:do_it).with("\x0b\003\x08\x07\x00\x00").returns("*")
+    assert_equal "*", @stepper.set_start_current(RNSchrittmotor::BOTH, 1800, RNSchrittmotor::FORGET)
   end
 
   def test_set_stepper_current
-    @stepper.expects(:do_it).with("\x0b\001\350\003\000\000").returns("*")
-    assert_equal "*", @stepper.set_holding_current(RNSchrittmotor::FIRST, 1000, RNSchrittmotor::FORGET)
+    @stepper.expects(:do_it).with("\x0a\x01\xe8\x03\x00\x00").returns("*")
+    assert_equal "*", @stepper.set_stepper_current(RNSchrittmotor::FIRST, 1000, RNSchrittmotor::FORGET)
   end
 
   def test_set_holding_current
-    @stepper.expects(:do_it).with("\x0c\001\334\005\000\000").returns("*")
+    @stepper.expects(:do_it).with("\x0c\x01\x64\000\000\000").returns("*")
     assert_equal "*", @stepper.set_holding_current(RNSchrittmotor::FIRST, 100, RNSchrittmotor::FORGET)
-    @stepper.expects(:do_it).with("\x0c\001\334\005\001\000").returns("*")
-    assert_equal "*", @stepper.set_holding_current(RNSchrittmotor::FIRST, 100, RNSchrittmotor::PERSIST)
+    @stepper.expects(:do_it).with("\x0c\002\x64\000\001\000").returns("*")
+    assert_equal "*", @stepper.set_holding_current(RNSchrittmotor::SECOND, 100, RNSchrittmotor::PERSIST)
   end
 
   def test_set_stepping_mode
-    @stepper.expects(:do_it).with("").returns("*")
-    assert_equal "*", @stepper.set_stepping_mode
+    @stepper.expects(:do_it).with("\r\001\000\000\000\000").returns("*")
+    assert_equal "*", @stepper.set_stepping_mode(RNSchrittmotor::FULL, RNSchrittmotor::FORGET)
+    @stepper.expects(:do_it).with("\r\000\001\000\000\000").returns("*")
+    assert_equal "*", @stepper.set_stepping_mode(RNSchrittmotor::HALF, RNSchrittmotor::PERSIST)
   end
 
   def test_step!
-    @stepper.expects(:do_it).with("").returns("*")
-    assert_equal "*", @stepper.step!
+    @stepper.expects(:do_it).with("7\001\270\v\000\000").returns("*")
+    assert_equal "*", @stepper.step!(RNSchrittmotor::FIRST, 3000)
   end
 
   def test_switch_off!
-    @stepper.expects(:do_it).with("").returns("*")
-    assert_equal "*", @stepper.switch_off!
+    @stepper.expects(:do_it).with("3\001\000\000\000\000").returns("*")
+    assert_equal "*", @stepper.switch_off!(RNSchrittmotor::FIRST)
   end
 
   def test_switch_on!
-    @stepper.expects(:do_it).with("").returns("*")
-    assert_equal "*", @stepper.switch_on!()
+    @stepper.expects(:do_it).with("2\001\000\000\000\000").returns("*")
+    assert_equal "*", @stepper.switch_on!(RNSchrittmotor::FIRST)
+  end
+
+  def test_emergency_off!
+    @stepper.expects(:do_it).with("3\003\000\000\000\000").returns("*")
+    assert_equal "*", @stepper.emergency_off!
   end
 end
 
