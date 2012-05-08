@@ -31,7 +31,7 @@ class RNSchrittmotor < SerialPort
     [:set_holding_current,   12, :motor, :mA, :persist],
     [:set_stepping_mode,     13, :mode, :persist],
     [:reset_counter,         14, :motor],
-    [:switch_on!,            50, :motor], # are you current settings correct for you stepper?
+    [:switch_on!,            50, :motor],
     [:switch_off!,           51, :motor], # you might wanna be careful if eg. your z-axis is high up it just falls down
     [:set_direction,         52, :motor, :direction],
     [:set_speed,             53, :motor, :speed, :accel],
@@ -59,20 +59,26 @@ class RNSchrittmotor < SerialPort
     )
   end
 
+  def initialize
+    self.read_timeout = 250
+    self.write_timeout = 250
+  end
+
   def emergency_off!
    switch_off!(BOTH)
   end
 
   def export_settings
     ee = read_eeprom(16)
-    %Q(i2c_slave_id = #{ee[0]}
-stepper_current = [#{self.class.bytes_to_number(ee[1,2])}, #{self.class.bytes_to_number(ee[3,2])}]
-start_current = [#{self.class.bytes_to_number(ee[5,2])}, #{self.class.bytes_to_number(ee[7,2])}]
-holding_current = [#{self.class.bytes_to_number(ee[9,2])}, #{self.class.bytes_to_number(ee[11,2])}]
-stepping_mode = #{ee[13]}
-controller_mode = #{ee[14]}
-crc_mode = #{ee[15]}
-)
+    %Q(
+      i2c_slave_id = #{ee[0]}
+      stepper_current = [#{self.class.bytes_to_number(ee[1,2])}, #{self.class.bytes_to_number(ee[3,2])}]
+      start_current = [#{self.class.bytes_to_number(ee[5,2])}, #{self.class.bytes_to_number(ee[7,2])}]
+      holding_current = [#{self.class.bytes_to_number(ee[9,2])}, #{self.class.bytes_to_number(ee[11,2])}]
+      stepping_mode = #{ee[13]}
+      controller_mode = #{ee[14]}
+      crc_mode = #{ee[15]}
+    ).gsub(/^\s*/, '')
   end
 
   def do_it(cmd)
@@ -108,7 +114,7 @@ crc_mode = #{ee[15]}
   end
 
   def self.bytes_to_number(bytes)
-    bytes[0]|bytes[1]<<8
+    bytes[0].ord|bytes[1].ord<<8
   end
 
   def self.steps_per_sec(num)
